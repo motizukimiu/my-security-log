@@ -6,17 +6,12 @@ import os
 import json
 import streamlit_authenticator as stauth
 
-# --- 0. 基本設定 (一番上にまとめる) ---
+# --- 0. 基本設定 ---
 EXAM_NAME_DEFAULT = "基本情報技術者"
-# app.py の一番上の方
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1gRnwt0OMbJo1A9GCQAgBvnYXNwtrHxtQRaD34941mvQ/edit"
-CSV_FILE = "study_log.csv"
 CONFIG_FILE = "config.json"
 
-# ページ設定
 st.set_page_config(page_title="学習管理アプリ", layout="wide")
-
-# スプレッドシート接続
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # --- 1. 関数定義 ---
@@ -40,14 +35,12 @@ def save_config(config):
 
 config = load_config()
 
-# --- 2. 初回ユーザー登録画面 ---
+# --- 2. 初回ユーザー登録 ---
 if not config["credentials"]["usernames"]:
     st.title("🔑 初期ユーザー設定")
-    st.info("最初に使用するIDとパスワードを設定してください。")
     new_id = st.text_input("希望のログインID")
     new_pw = st.text_input("希望のパスワード", type="password")
     confirm_pw = st.text_input("パスワード（確認用）", type="password")
-    
     if st.button("アカウントを作成して開始"):
         if new_id and new_pw == confirm_pw:
             hashed_pw = stauth.Hasher.hash(new_pw)
@@ -57,8 +50,6 @@ if not config["credentials"]["usernames"]:
             save_config(config)
             st.success("設定完了！再読み込みしてください。")
             st.rerun()
-        else:
-            st.error("入力内容を確認してください。")
     st.stop()
 
 # --- 3. ログイン認証 ---
@@ -68,19 +59,12 @@ authenticator = stauth.Authenticate(
     key="abcdef",
     cookie_expiry_days=30
 )
-
 authenticator.login()
 
 auth_status = st.session_state.get("authentication_status")
 
-if auth_status is False:
-    st.error("IDまたはパスワードが間違っています")
-elif auth_status is None:
-    st.warning("ログインしてください")
-elif auth_status:
-    # ✨✨ ここから下がログイン成功後のメイン処理 (インデントに注意) ✨✨
-
-    # 共通変数の設定
+if auth_status:
+    # ログイン成功後のメイン処理
     GOAL_HOURS = config.get("goal_hours", 120)
     EXAM_DATE = datetime.date.fromisoformat(config.get("exam_date", "2026-07-26"))
     EXAM_NAME = config.get("exam_name", EXAM_NAME_DEFAULT)
@@ -91,10 +75,7 @@ elif auth_status:
         "プログラミング": "#c6ff8e", "その他検定": "#ffff8e", "その他": "#ffc68e"
     }
 
-    if not os.path.exists(CSV_FILE):
-        pd.DataFrame(columns=["日付", "時間", "教科", "内容"]).to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
-
-    # --- サイドバー構成 ---
+    # --- サイドバー：学習記録の入力 ---
     authenticator.logout("ログアウト", "sidebar")
     st.sidebar.divider()
     
@@ -107,60 +88,51 @@ elif auth_status:
             config["exam_date"] = edit_exam_date.isoformat()
             config["goal_hours"] = edit_goal
             save_config(config)
-            st.success("更新しました！")
             st.rerun()
 
     st.sidebar.header("📝 今日の学習を記録")
-    today = datetime.date.today()
-    study_date = st.sidebar.date_input("勉強した日", today)
+    study_date = st.sidebar.date_input("勉強した日", datetime.date.today())
     subject = st.sidebar.selectbox("教科", list(SUBJECTS.keys()))
     hour = st.sidebar.number_input("勉強時間 (h)", min_value=0.0, step=0.5)
     note = st.sidebar.text_area("内容")
     
     if st.sidebar.button("記録を保存"):
         if note and hour > 0:
-            new_row = pd.DataFrame([[study_date, hour, subject, note]], columns=["日付", "時間", "教科", "内容"])
-            new_row.to_csv(CSV_FILE, mode='a', header=False, index=False, encoding="utf-8-sig")
-            st.sidebar.success("保存完了！")
+            # logsシートに追記
+            current_logs = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="logs", ttl=0)
+            new_row = pd.DataFrame([[study_date.strftime("%Y-%m-%d"), hour, subject, note]], 
+                                   columns=["日付", "時間", "教科", "内容"])
+            updated_logs = pd.concat([current_logs, new_row], ignore_index=True)
+            conn.update(spreadsheet=SPREADSHEET_URL, worksheet="logs", data=updated_logs)
+            st.sidebar.success("スプレッドシートに保存しました！")
             st.rerun()
 
-    # --- メイン画面表示 ---
+    # --- メイン画面 ---
     st.title(f"🛡️ {EXAM_NAME} 学習管理")
 
-    # 1. カウントダウン表示
+    # 1. カウントダウン
     st.subheader("🎯 目標カウントダウン")
-    try:
-        # データの読み込み
-        event_df = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=0)
-
-        if not event_df.empty:
-            # 3列のレイアウトを作成
-            cols = st.columns(3)
-            # データの数だけ繰り返す（ループ処理）
-            for i, row in event_df.iterrows():
-                with cols[i % 3]: # 0, 1, 2番目の列に順番に入れる
-                    target = pd.to_datetime(row['target_date'])
-                    diff = (target - pd.to_datetime(datetime.date.today())).days
-            
-                    if diff >= 0:
-                        st.metric(label=row['event_name'], value=f"あと {diff} 日")
-                    else:
-                        st.caption(f"✅ {row['event_name']} 完了")
-        else:
-            st.info("イベントが登録されていません。下から追加できます。")
-    except Exception as e:
-        st.error(f"イベント読み込みエラー: {e}")
-
-    # 2. 学習状況のサマリー
-    df_log = pd.read_csv(CSV_FILE)
+    event_df = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=0)
+    if not event_df.empty:
+        cols = st.columns(3)
+        for i, row in event_df.iterrows():
+            with cols[i % 3]:
+                target = pd.to_datetime(row['target_date'])
+                diff = (target - pd.to_datetime(datetime.date.today())).days
+                if diff >= 0: st.metric(label=row['event_name'], value=f"あと {diff} 日")
+                else: st.caption(f"✅ {row['event_name']} 完了")
+    
+    # 2. 学習ログの読み込みとサマリー
+    df_log = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="logs", ttl=0)
     if not df_log.empty:
         df_log["日付"] = pd.to_datetime(df_log["日付"]).dt.date
+        df_log["時間"] = pd.to_numeric(df_log["時間"])
         total_hours = df_log["時間"].sum()
     else:
         total_hours = 0
 
-    main_days_left = (EXAM_DATE - today).days
     c1, c2, c3 = st.columns(3)
+    main_days_left = (EXAM_DATE - datetime.date.today()).days
     with c1: st.metric(f"{EXAM_NAME}まで", f"{main_days_left} 日")
     with c2: st.metric("合計学習時間", f"{total_hours:.1f} / {GOAL_HOURS}h")
     with c3:
@@ -178,88 +150,57 @@ elif auth_status:
     with t2:
         st.dataframe(df_log.sort_values(by="日付", ascending=False), use_container_width=True)
 
-# 4. イベント追加フォーム (ここを1箇所に絞る)
+    # 4. イベント追加
     st.divider()
     with st.expander("➕ 新しいイベント・検定を追加する"):
-        # キー名を "event_form_v2" に変更して重複エラーを回避
         with st.form("event_form_v2", clear_on_submit=True):
-            new_ev_name = st.text_input("イベント名 (例: CCNA試験)")
+            new_ev_name = st.text_input("イベント名")
             new_ev_date = st.date_input("日付")
-            submit_event = st.form_submit_button("イベントを登録")
-            
-            if submit_event:
+            if st.form_submit_button("イベントを登録"):
                 if new_ev_name:
-                    # 既存のイベントを読み込む
                     current_events = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=0)
-                    
-                    # 新しい行を作成
-                    new_row = pd.DataFrame([{
-                        "event_name": new_ev_name,
-                        "target_date": new_ev_date.strftime("%Y-%m-%d")
-                    }])
-                    
-                    # 合体させて更新
-                    updated_events = pd.concat([current_events, new_row], ignore_index=True)
-                    conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=updated_events)
-                    
-                    st.success(f"「{new_ev_name}」を登録しました！")
+                    new_event = pd.DataFrame([{"event_name": new_ev_name, "target_date": new_ev_date.strftime("%Y-%m-%d")}])
+                    updated_ev = pd.concat([current_events, new_event], ignore_index=True)
+                    conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=updated_ev)
+                    st.success("登録完了！")
                     st.rerun()
-                else:
-                    st.warning("名前を入力してください。")
-                    
-# --- 5. イベント削除機能 ---
+
+    # 5. イベント削除
     with st.expander("🗑️ 登録済みのイベントを削除する"):
         if not event_df.empty:
-            # 削除したいイベントを選択するプルダウン
-            delete_target = st.selectbox(
-                "削除するイベントを選択してください", 
-                event_df["event_name"].tolist()
-            )
-            
+            del_target = st.selectbox("削除するイベントを選択", event_df["event_name"].tolist())
             if st.button("選択したイベントを削除"):
-                # 選択したイベント以外の行だけを残す（フィルタリングによる削除）
-                updated_events = event_df[event_df["event_name"] != delete_target]
-                
-                # スプレッドシートを更新
-                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=updated_events)
-                
-                st.success(f"「{delete_target}」を削除しました。")
+                updated_ev = event_df[event_df["event_name"] != del_target]
+                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=updated_ev)
                 st.rerun()
-        else:
-            st.info("削除できるイベントがありません。")
-            
-# --- 6. 学習記録の修正・削除機能 ---
+
+    # 6. 学習記録の修正・削除 (スプレッドシート版)
     st.divider()
     with st.expander("🔧 学習記録の修正・削除"):
         if not df_log.empty:
-            # 修正したい行を「日付 - 教科 - 内容」で選べるようにする
             df_log_display = df_log.copy()
-            df_log_display["display"] = df_log["日付"].astype(str) + " | " + df_log["教科"] + " | " + df_log["内容"].str[:10] + "..."
+            df_log_display["display"] = df_log["日付"].astype(str) + " | " + df_log["教科"]
+            target_idx = st.selectbox("修正・削除する記録を選択", df_log_display.index, format_func=lambda x: df_log_display.loc[x, "display"])
             
-            target_index = st.selectbox("修正・削除する記録を選択", df_log_display.index, format_func=lambda x: df_log_display.loc[x, "display"])
-            
-            # 選択した行の現在の値を表示
-            col_edit1, col_edit2 = st.columns(2)
-            with col_edit1:
-                new_subject = st.selectbox("教科の変更", list(SUBJECTS.keys()), index=list(SUBJECTS.keys()).index(df_log.loc[target_index, "教科"]))
-                new_hour = st.number_input("時間の変更 (h)", value=float(df_log.loc[target_index, "時間"]), step=0.5)
-            with col_edit2:
-                new_date = st.date_input("日付の変更", df_log.loc[target_index, "日付"])
-                new_note = st.text_area("内容の変更", value=df_log.loc[target_index, "内容"])
+            col_e1, col_e2 = st.columns(2)
+            with col_e1:
+                edit_sub = st.selectbox("教科", list(SUBJECTS.keys()), index=list(SUBJECTS.keys()).index(df_log.loc[target_idx, "教科"]))
+                edit_h = st.number_input("時間 (h)", value=float(df_log.loc[target_idx, "時間"]), step=0.5)
+            with col_e2:
+                edit_d = st.date_input("日付", df_log.loc[target_idx, "日付"])
+                edit_n = st.text_area("内容", value=df_log.loc[target_idx, "内容"])
 
-            btn_col1, btn_col2 = st.columns(2)
-            with btn_col1:
-                if st.button("🆙 記録を更新する"):
-                    df_log.loc[target_index, ["日付", "時間", "教科", "内容"]] = [new_date, new_hour, new_subject, new_note]
-                    df_log.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
-                    st.success("記録を更新しました！")
-                    st.rerun()
-            
-            with btn_col2:
-                if st.button("🗑️ この記録を削除する"):
-                    df_log = df_log.drop(target_index)
-                    df_log.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
-                    st.success("記録を削除しました。")
-                    st.rerun()
-        else:
-            st.info("修正できる記録がまだありません。")
+            b1, b2 = st.columns(2)
+            if b1.button("🆙 記録を更新する"):
+                df_log.loc[target_idx, ["日付", "時間", "教科", "内容"]] = [edit_d.strftime("%Y-%m-%d"), edit_h, edit_sub, edit_n]
+                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="logs", data=df_log)
+                st.rerun()
+            if b2.button("🗑️ この記録を削除する"):
+                df_log = df_log.drop(target_idx)
+                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="logs", data=df_log)
+                st.rerun()
+
+elif auth_status is False:
+    st.error("IDまたはパスワードが間違っています")
+else:
+    st.warning("ログインしてください")
