@@ -152,15 +152,48 @@ if auth_status:
     st.progress(prog / 100)
 
     # 3. グラフと履歴
-    t1, t2 = st.tabs(["📊 学習グラフ", "📋 全履歴"])
+    # 3. グラフと履歴 (タブを3つに増やします)
+    t1, t2, t3 = st.tabs(["📊 学習グラフ", "🔍 教科別分析", "📋 全履歴"])
+    
     with t1:
         if not df_log.empty:
             chart_data = df_log.groupby(["日付", "教科"])["時間"].sum().unstack().fillna(0)
             st.bar_chart(chart_data)
         else: st.info("データがありません")
-    with t2:
-        st.dataframe(df_log.sort_values(by="日付", ascending=False), use_container_width=True)
 
+    with t2:
+        if not df_log.empty:
+            st.subheader("特定教科の深掘り分析")
+            # 分析したい教科を選択
+            target_sub = st.selectbox("分析する教科を選んでください", list(SUBJECTS.keys()))
+            
+            # 選択された教科のデータだけを抽出 (フィルタリング)
+            sub_df = df_log[df_log["教科"] == target_sub].sort_values("日付")
+            
+            if not sub_df.empty:
+                col_sub1, col_sub2 = st.columns(2)
+                sub_total = sub_df["時間"].sum()
+                sub_count = len(sub_df)
+                
+                with col_sub1:
+                    st.metric(f"{target_sub} の合計時間", f"{sub_total:.1f} h")
+                with col_sub2:
+                    st.metric("学習回数", f"{sub_count} 回")
+                
+                # その教科だけの推移グラフ
+                st.line_chart(sub_df.set_index("日付")["時間"])
+                
+                # その教科の学習内容メモ一覧
+                st.write(f"📝 {target_sub} の学習メモ")
+                st.dataframe(sub_df[["日付", "時間", "内容"]].sort_values("日付", ascending=False), use_container_width=True)
+            else:
+                st.info(f"{target_sub} の記録はまだありません。")
+        else:
+            st.info("データがありません")
+
+    with t3:
+        st.dataframe(df_log.sort_values(by="日付", ascending=False), use_container_width=True)
+        
     # 4. イベント追加・削除
     st.divider()
     col_f1, col_f2 = st.columns(2)
