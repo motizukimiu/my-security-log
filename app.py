@@ -35,8 +35,8 @@ login_config = load_config()
 # --- 2. 初回ユーザー登録 ---
 if not login_config["credentials"]["usernames"]:
     st.title("🔑 初期ユーザー設定")
-    new_id = st.text_input("希望のログインID")
-    new_pw = st.text_input("希望 of パスワード", type="password")
+    new_id = st.text_input("ログインID")
+    new_pw = st.text_input("パスワード", type="password")
     confirm_pw = st.text_input("パスワード（確認用）", type="password")
     if st.button("アカウントを作成して開始"):
         if new_id and new_pw == confirm_pw:
@@ -151,7 +151,6 @@ if auth_status:
         st.metric("目標達成率", f"{prog} %")
     st.progress(prog / 100)
 
-    # 3. グラフと履歴
     # 3. グラフと履歴 (タブを3つに増やします)
     t1, t2, t3 = st.tabs(["📊 学習グラフ", "🔍 教科別分析", "📋 全履歴"])
     
