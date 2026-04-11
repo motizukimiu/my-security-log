@@ -227,3 +227,39 @@ elif auth_status:
                 st.rerun()
         else:
             st.info("削除できるイベントがありません。")
+            
+# --- 6. 学習記録の修正・削除機能 ---
+    st.divider()
+    with st.expander("🔧 学習記録の修正・削除"):
+        if not df_log.empty:
+            # 修正したい行を「日付 - 教科 - 内容」で選べるようにする
+            df_log_display = df_log.copy()
+            df_log_display["display"] = df_log["日付"].astype(str) + " | " + df_log["教科"] + " | " + df_log["内容"].str[:10] + "..."
+            
+            target_index = st.selectbox("修正・削除する記録を選択", df_log_display.index, format_func=lambda x: df_log_display.loc[x, "display"])
+            
+            # 選択した行の現在の値を表示
+            col_edit1, col_edit2 = st.columns(2)
+            with col_edit1:
+                new_subject = st.selectbox("教科の変更", list(SUBJECTS.keys()), index=list(SUBJECTS.keys()).index(df_log.loc[target_index, "教科"]))
+                new_hour = st.number_input("時間の変更 (h)", value=float(df_log.loc[target_index, "時間"]), step=0.5)
+            with col_edit2:
+                new_date = st.date_input("日付の変更", df_log.loc[target_index, "日付"])
+                new_note = st.text_area("内容の変更", value=df_log.loc[target_index, "内容"])
+
+            btn_col1, btn_col2 = st.columns(2)
+            with btn_col1:
+                if st.button("🆙 記録を更新する"):
+                    df_log.loc[target_index, ["日付", "時間", "教科", "内容"]] = [new_date, new_hour, new_subject, new_note]
+                    df_log.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
+                    st.success("記録を更新しました！")
+                    st.rerun()
+            
+            with btn_col2:
+                if st.button("🗑️ この記録を削除する"):
+                    df_log = df_log.drop(target_index)
+                    df_log.to_csv(CSV_FILE, index=False, encoding="utf-8-sig")
+                    st.success("記録を削除しました。")
+                    st.rerun()
+        else:
+            st.info("修正できる記録がまだありません。")
