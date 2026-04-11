@@ -187,11 +187,10 @@ elif auth_status:
                         "target_date": new_ev_date.strftime("%Y-%m-%d")
                     }])
                     # spreadsheet 引数ではなく、明示的にURLの形式に戻すか、
-                    # 修正後
-                    # app.py 191行目付近
+                    # app.py 192行目付近を修正
                     conn.update(
                         spreadsheet=SPREADSHEET_URL, 
-                        worksheet="events",  # ここを "events" と手打ちで書き直す
+                        worksheet=1,  # 0が1番目のシート、1が2番目のシートです。2番目がeventsなら「1」にします
                         data=new_ev_data
                     )
                     st.success("イベントを登録しました！")
