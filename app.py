@@ -63,7 +63,7 @@ auth_status = st.session_state.get("authentication_status")
 if auth_status:
     # --- アプリ設定の読み込み (スプレッドシートのconfigシートから) ---
     try:
-        conf_df = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="config", ttl=0)
+        conf_df = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="config", ttl=60)
         if not conf_df.empty:
             # 1行目のデータを使用
             row = conf_df.iloc[0]
@@ -123,7 +123,7 @@ if auth_status:
 
     # 1. カウントダウン
     st.subheader("🎯 目標カウントダウン")
-    event_df = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=0)
+    event_df = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=60)
     if not event_df.empty:
         cols = st.columns(3)
         for i, row in event_df.iterrows():
@@ -134,7 +134,7 @@ if auth_status:
                 else: st.caption(f"✅ {row['event_name']} 完了")
     
     # 2. 学習状況サマリー
-    df_log = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="logs", ttl=0)
+    df_log = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="logs", ttl=60)
     if not df_log.empty:
         df_log["日付"] = pd.to_datetime(df_log["日付"]).dt.date
         df_log["時間"] = pd.to_numeric(df_log["時間"])
