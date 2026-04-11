@@ -181,7 +181,12 @@ with st.expander("新しいイベントを追加する"):
                 }])
                 
                 # スプレッドシートの 'events' シートに追記
-                conn.update(worksheet="events", data=new_event_data)
+                # あなたのスプレッドシートのURLを指定して書き込む
+                conn.update(
+                    spreadsheet="https://docs.google.com/spreadsheets/d/1XtRqvweg_4E-NJKkM76D9tf-TyLBncnoNWp21ly1IPA/edit", 
+                    worksheet="events", 
+                    data=new_event_data
+                )
                 st.success(f"「{new_event}」を登録しました！アプリを再読み込みしてください。")
             else:
                 st.error("イベント名を入力してください。")
