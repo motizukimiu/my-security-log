@@ -223,7 +223,7 @@ with st.expander("➕ 新しいイベントを追加する"):
                 
                 st.success(f"「{new_event}」を登録しました！")
                 st.rerun()
-                    st.success("イベントを登録しました！")
-                    st.rerun()
-                else:
-                    st.warning("名前を入力してください。")
+                st.success("イベントを登録しました！")
+                st.rerun()
+            else:
+                st.warning("名前を入力してください。")
