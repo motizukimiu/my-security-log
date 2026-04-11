@@ -161,36 +161,35 @@ elif auth_status:
             st.sidebar.success("保存完了！")
             st.rerun()
             
-# --- イベント追加フォーム ---
 st.markdown("---")
-st.header("📅 イベント・検定の登録")
+st.header("🎯 目標カウントダウン")
 
-with st.expander("新しいイベントを追加する"):
-    with st.form("event_form", clear_on_submit=True):
-        new_event = st.text_input("イベント名 (例: CCNA試験, 基本情報A免除試験)")
-        new_date = st.date_input("目標日付", datetime.date.today())
-        
-        submit_event = st.form_submit_button("イベントを登録")
-        
-        if submit_event:
-            if new_event:
-                # 登録するデータを作成
-                new_event_data = pd.DataFrame([{
-                    "event_name": new_event,
-                    "target_date": new_date.strftime("%Y-%m-%d")
-                }])
+# 1. データの読み込み（常に最新を取得）
+try:
+    # ttl=0 でキャッシュを無視し、直接スプレッドシートから読み取る
+    event_df = conn.read(worksheet="events", ttl=0)
+    
+    # データが存在する場合のみ表示
+    if not event_df.empty:
+        # 1行に3つずつ並べる（カラム分け）
+        cols = st.columns(3)
+        for i, row in event_df.iterrows():
+            with cols[i % 3]:
+                target = pd.to_datetime(row['target_date'])
+                today = pd.to_datetime(datetime.date.today())
+                days_left = (target - today).days
                 
-                # スプレッドシートの 'events' シートに追記
-                # あなたのスプレッドシートのURLを指定して書き込む
-                conn.update(
-                    spreadsheet="https://docs.google.com/spreadsheets/d/1XtRqvweg_4E-NJKkM76D9tf-TyLBncnoNWp21ly1IPA/edit", 
-                    worksheet="events", 
-                    data=new_event_data
-                )
-                st.success(f"「{new_event}」を登録しました！アプリを再読み込みしてください。")
-            else:
-                st.error("イベント名を入力してください。")
-                
+                if days_left >= 0:
+                    st.metric(label=row['event_name'], value=f"あと {days_left} 日")
+                else:
+                    st.caption(f"✅ {row['event_name']} 完了")
+    else:
+        st.info("登録済みのイベントはありません。下のフォームから追加してください。")
+
+except Exception as e:
+    # まだシートが空だったり、読み込めない場合の保険
+    st.info("イベントデータを読み込み中です...")
+
 # --- カウントダウン表示エリア ---
 try:
     event_df = conn.read(worksheet="events")
