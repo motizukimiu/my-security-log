@@ -2,6 +2,9 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
+# ファイルの上の方（import文の後など）に追加
+EXAM_NAME = "基本情報技術者"  # または「CCNA」など
+
 # 1. スプレッドシートへの接続設定
 conn = st.connection("gsheets", type=GSheetsConnection)
 
@@ -160,10 +163,6 @@ elif auth_status:
             new_row.to_csv(CSV_FILE, mode='a', header=False, index=False, encoding="utf-8-sig")
             st.sidebar.success("保存完了！")
             st.rerun()
-            
-st.markdown("---")
-st.header("🎯 目標カウントダウン")
-
 
 # --- 設定 ---
 SPREADSHEET_URL = "あなたのスプレッドシートのURL"
