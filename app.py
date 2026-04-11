@@ -77,7 +77,7 @@ if not config["credentials"]["usernames"]:
     
     if st.button("アカウントを作成して開始"):
         if new_id and new_pw == confirm_pw:
-            hashed_pw = stauth.Hasher([new_pw]).generate()[0]
+            hashed_pw = stauth.Hasher.hash(new_pw)
             config["credentials"]["usernames"] = {
                 new_id: {"name": "管理者", "password": hashed_pw, "email": "admin@example.com"}
             }
