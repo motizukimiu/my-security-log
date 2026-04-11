@@ -8,7 +8,7 @@ import streamlit_authenticator as stauth
 
 # --- 0. 基本設定 (一番上にまとめる) ---
 EXAM_NAME_DEFAULT = "基本情報技術者"
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1gRnwt0OMbJo1A9GCQAgBvnYXNwtrHxtQRaD34941mvQ/edit"
+SPREADSHEET_URL = "1gRnwt0OMbJo1A9GCQAgBvnYXNwtrHxtQRaD34941mvQ"
 CSV_FILE = "study_log.csv"
 CONFIG_FILE = "config.json"
 
