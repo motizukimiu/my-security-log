@@ -206,3 +206,24 @@ elif auth_status:
                     st.rerun()
                 else:
                     st.warning("名前を入力してください。")
+                    
+# --- 5. イベント削除機能 ---
+    with st.expander("🗑️ 登録済みのイベントを削除する"):
+        if not event_df.empty:
+            # 削除したいイベントを選択するプルダウン
+            delete_target = st.selectbox(
+                "削除するイベントを選択してください", 
+                event_df["event_name"].tolist()
+            )
+            
+            if st.button("選択したイベントを削除"):
+                # 選択したイベント以外の行だけを残す（フィルタリングによる削除）
+                updated_events = event_df[event_df["event_name"] != delete_target]
+                
+                # スプレッドシートを更新
+                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=updated_events)
+                
+                st.success(f"「{delete_target}」を削除しました。")
+                st.rerun()
+        else:
+            st.info("削除できるイベントがありません。")
