@@ -188,9 +188,10 @@ elif auth_status:
                     }])
                     # spreadsheet 引数ではなく、明示的にURLの形式に戻すか、
                     # 修正後
+                    # app.py 191行目付近
                     conn.update(
                         spreadsheet=SPREADSHEET_URL, 
-                        worksheet="events", 
+                        worksheet="events",  # ここを "events" と手打ちで書き直す
                         data=new_ev_data
                     )
                     st.success("イベントを登録しました！")
