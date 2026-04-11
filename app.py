@@ -8,7 +8,8 @@ import streamlit_authenticator as stauth
 
 # --- 0. 基本設定 (一番上にまとめる) ---
 EXAM_NAME_DEFAULT = "基本情報技術者"
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1gRnwt0OMbJo1A9GCQAgBvnYXNwtrHxtQRaD34941mvQ/adit"
+# app.py の一番上の方
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1gRnwt0OMbJo1A9GCQAgBvnYXNwtrHxtQRaD34941mvQ/edit"
 CSV_FILE = "study_log.csv"
 CONFIG_FILE = "config.json"
 
@@ -186,9 +187,9 @@ elif auth_status:
                         "target_date": new_ev_date.strftime("%Y-%m-%d")
                     }])
                     # spreadsheet 引数ではなく、明示的にURLの形式に戻すか、
-                    # もしくは以下の書き方を試してください
+                    # 修正後
                     conn.update(
-                        spreadsheet=f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_URL}", 
+                        spreadsheet=SPREADSHEET_URL, 
                         worksheet="events", 
                         data=new_ev_data
                     )
