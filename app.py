@@ -164,14 +164,20 @@ elif auth_status:
 st.markdown("---")
 st.header("🎯 目標カウントダウン")
 
-# 1. データの読み込み（常に最新を取得）
+
+# --- 設定 ---
+SPREADSHEET_URL = "あなたのスプレッドシートのURL"
+
+st.markdown("---")
+st.header("🎯 目標カウントダウン")
+
+# 1. データの読み込み
 try:
-    # ttl=0 でキャッシュを無視し、直接スプレッドシートから読み取る
-    event_df = conn.read(worksheet="events", ttl=0)
+    # ttl=0 でキャッシュを無効化し、常に最新のスプレッドシートを読み込む
+    event_df = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=0)
     
-    # データが存在する場合のみ表示
     if not event_df.empty:
-        # 1行に3つずつ並べる（カラム分け）
+        # カウントダウンを並べて表示
         cols = st.columns(3)
         for i, row in event_df.iterrows():
             with cols[i % 3]:
@@ -184,31 +190,32 @@ try:
                 else:
                     st.caption(f"✅ {row['event_name']} 完了")
     else:
-        st.info("登録済みのイベントはありません。下のフォームから追加してください。")
+        st.info("登録済みのイベントはありません。")
 
 except Exception as e:
-    # まだシートが空だったり、読み込めない場合の保険
-    st.info("イベントデータを読み込み中です...")
+    # エラーが出た場合、何が原因かブラウザに表示させる（デバッグ用）
+    st.error(f"読み込みエラーが発生しました: {e}")
 
-# --- カウントダウン表示エリア ---
-try:
-    event_df = conn.read(worksheet="events")
-    if not event_df.empty:
-        st.subheader("🎯 目標カウントダウン")
-        cols = st.columns(len(event_df)) # 横並びに表示
+# --- イベント追加フォーム ---
+with st.expander("➕ 新しいイベントを追加する"):
+    with st.form("event_form", clear_on_submit=True):
+        new_event = st.text_input("イベント名 (例: CCNA試験)")
+        new_date = st.date_input("目標日付")
+        submit_event = st.form_submit_button("イベントを登録")
         
-        for i, row in event_df.iterrows():
-            target = pd.to_datetime(row['target_date'])
-            today = pd.to_datetime(datetime.date.today())
-            days_left = (target - today).days
-            
-            with cols[i % len(cols)]: # カラムを循環させて表示
-                if days_left >= 0:
-                    st.metric(label=row['event_name'], value=f"あと {days_left} 日")
-                else:
-                    st.caption(f"✅ {row['event_name']} 終了")
-except Exception:
-    st.info("イベントを登録するとここにカウントダウンが表示されます。")
+        if submit_event:
+            if new_event:
+                new_event_data = pd.DataFrame([{
+                    "event_name": new_event,
+                    "target_date": new_date.strftime("%Y-%m-%d")
+                }])
+                # 書き込み時もURLを明示
+                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=new_event_data)
+                st.success(f"「{new_event}」を登録しました！")
+                # 登録後、画面を更新して反映させる
+                st.rerun()
+            else:
+                st.warning("イベント名を入力してください。")
 
     # --- メイン画面の表示 ---
     st.title(f"🛡️ {EXAM_NAME} 学習管理")
