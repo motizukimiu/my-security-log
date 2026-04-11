@@ -130,14 +130,18 @@ elif auth_status:
     # 1. カウントダウン表示
     st.subheader("🎯 目標カウントダウン")
     try:
+        # データの読み込み
         event_df = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=0)
+
         if not event_df.empty:
-            ev_cols = st.columns(3)
+            # 3列のレイアウトを作成
+            cols = st.columns(3)
+            # データの数だけ繰り返す（ループ処理）
             for i, row in event_df.iterrows():
-                with ev_cols[i % 3]:
+                with cols[i % 3]: # 0, 1, 2番目の列に順番に入れる
                     target = pd.to_datetime(row['target_date'])
-                    cur_today = pd.to_datetime(datetime.date.today())
-                    diff = (target - cur_today).days
+                    diff = (target - pd.to_datetime(datetime.date.today())).days
+            
                     if diff >= 0:
                         st.metric(label=row['event_name'], value=f"あと {diff} 日")
                     else:
@@ -193,6 +197,32 @@ elif auth_status:
                         worksheet="events", # ここを確実に "events" にする
                         data=new_ev_data
                     )
+                    # --- イベント追加フォーム ---
+with st.expander("➕ 新しいイベントを追加する"):
+    with st.form("event_form", clear_on_submit=True):
+        new_event = st.text_input("イベント名 (例: CCNA試験)")
+        new_date = st.date_input("目標日付")
+        submit_event = st.form_submit_button("イベントを登録")
+        
+        if submit_event:
+            if new_event:
+                # 1. 既存のイベントを一度読み込む（追記するために必要）
+                current_events = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=0)
+                
+                # 2. 新しいイベントのデータを作成
+                new_row = pd.DataFrame([{
+                    "event_name": new_event,
+                    "target_date": new_date.strftime("%Y-%m-%d")
+                }])
+                
+                # 3. 既存のデータと合体させる（これで複数個保存できる！）
+                updated_events = pd.concat([current_events, new_row], ignore_index=True)
+                
+                # 4. スプレッドシート全体を更新
+                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=updated_events)
+                
+                st.success(f"「{new_event}」を登録しました！")
+                st.rerun()
                     st.success("イベントを登録しました！")
                     st.rerun()
                 else:
