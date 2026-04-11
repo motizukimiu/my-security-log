@@ -197,33 +197,31 @@ elif auth_status:
                         worksheet="events", # ここを確実に "events" にする
                         data=new_ev_data
                     )
-                    # --- イベント追加フォーム ---
-with st.expander("➕ 新しいイベントを追加する"):
-    with st.form("event_form", clear_on_submit=True):
-        new_event = st.text_input("イベント名 (例: CCNA試験)")
-        new_date = st.date_input("目標日付")
-        submit_event = st.form_submit_button("イベントを登録")
-        
-        if submit_event:
-            if new_event:
-                # 1. 既存のイベントを一度読み込む（追記するために必要）
-                current_events = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=0)
-                
-                # 2. 新しいイベントのデータを作成
-                new_row = pd.DataFrame([{
-                    "event_name": new_event,
-                    "target_date": new_date.strftime("%Y-%m-%d")
-                }])
-                
-                # 3. 既存のデータと合体させる（これで複数個保存できる！）
-                updated_events = pd.concat([current_events, new_row], ignore_index=True)
-                
-                # 4. スプレッドシート全体を更新
-                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=updated_events)
-                
-                st.success(f"「{new_event}」を登録しました！")
-                st.rerun()
-                st.success("イベントを登録しました！")
-                st.rerun()
-            else:
-                st.warning("名前を入力してください。")
+# 4. イベント追加フォーム (ここを1箇所に絞る)
+    st.divider()
+    with st.expander("➕ 新しいイベント・検定を追加する"):
+        # キー名を "event_form_v2" に変更して重複エラーを回避
+        with st.form("event_form_v2", clear_on_submit=True):
+            new_ev_name = st.text_input("イベント名 (例: CCNA試験)")
+            new_ev_date = st.date_input("日付")
+            submit_event = st.form_submit_button("イベントを登録")
+            
+            if submit_event:
+                if new_ev_name:
+                    # 既存のイベントを読み込む
+                    current_events = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="events", ttl=0)
+                    
+                    # 新しい行を作成
+                    new_row = pd.DataFrame([{
+                        "event_name": new_ev_name,
+                        "target_date": new_ev_date.strftime("%Y-%m-%d")
+                    }])
+                    
+                    # 合体させて更新
+                    updated_events = pd.concat([current_events, new_row], ignore_index=True)
+                    conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=updated_events)
+                    
+                    st.success(f"「{new_ev_name}」を登録しました！")
+                    st.rerun()
+                else:
+                    st.warning("名前を入力してください。")
