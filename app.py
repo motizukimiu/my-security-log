@@ -178,25 +178,6 @@ elif auth_status:
     with t2:
         st.dataframe(df_log.sort_values(by="日付", ascending=False), use_container_width=True)
 
-    # 4. イベント追加フォーム (一番下に配置)
-    st.divider()
-    with st.expander("➕ 新しいイベント・検定を追加する"):
-        with st.form("event_form", clear_on_submit=True):
-            new_ev_name = st.text_input("イベント名 (例: CCNA試験)")
-            new_ev_date = st.date_input("日付")
-            if st.form_submit_button("イベントを登録"):
-                if new_ev_name:
-                    new_ev_data = pd.DataFrame([{
-                        "event_name": new_ev_name,
-                        "target_date": new_ev_date.strftime("%Y-%m-%d")
-                    }])
-                    # spreadsheet 引数ではなく、明示的にURLの形式に戻すか、
-                    # app.py 191行目付近を確認
-                    conn.update(
-                        spreadsheet=SPREADSHEET_URL, 
-                        worksheet="events", # ここを確実に "events" にする
-                        data=new_ev_data
-                    )
 # 4. イベント追加フォーム (ここを1箇所に絞る)
     st.divider()
     with st.expander("➕ 新しいイベント・検定を追加する"):
