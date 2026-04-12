@@ -60,6 +60,22 @@ authenticator.login()
 
 auth_status = st.session_state.get("authentication_status")
 
+# ログイン成功後のメイン処理内
+SUBJECTS = {
+    "AIリテラシー": "#ff8e8e", 
+    "基本情報技術者": "#ff8ec6", 
+    "HTML/CSS": "#ff8eff", 
+    "Python": "#c68eff", 
+    "データベース": "#8e8eff", 
+    "クラウド接続": "#8ec6ff",
+    "Java": "#8effff", 
+    "応用情報技術者": "#8effc6", 
+    "AWS認定試験": "#8eff8e",
+    "プログラミング": "#c6ff8e", 
+    "その他検定": "#ffff8e", 
+    "その他": "#ffc68e"
+}
+
 if auth_status:
     # --- アプリ設定の読み込み (スプレッドシートのconfigシートから) ---
     try:
@@ -76,12 +92,7 @@ if auth_status:
         st.error(f"設定読み込みエラー: {e}")
         EXAM_NAME, EXAM_DATE, GOAL_HOURS = EXAM_NAME_DEFAULT, datetime.date(2026, 7, 26), 120
 
-    SUBJECTS = {
-        "AIリテラシー": "#ff8e8e", "基本情報技術者": "#ff8ec6", "HTML/CSS": "#ff8eff", 
-        "Python": "#c68eff", "データベース": "#8e8eff", "クラウド接続": "#8ec6ff",
-        "Java": "#8effff", "応用情報技術者": "#8effc6", "AWS認定試験": "#8eff8e",
-        "プログラミング": "#c6ff8e", "その他検定": "#ffff8e", "その他": "#ffc68e"
-    }
+   
 
     # --- サイドバー構成 ---
     authenticator.logout("ログアウト", "sidebar")
