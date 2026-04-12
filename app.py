@@ -215,17 +215,36 @@ if auth_status:
                     conn.update(spreadsheet=SPREADSHEET_URL, worksheet="events", data=event_df[event_df["event_name"] != del_target])
                     st.rerun()
 
-    # 5. 記録の修正・削除
-    if st.button("🗑️ この記録を削除する"):
-                # 1. データを削除
-                updated_df = df_log.drop(target_idx)
-                
-                # 2. スプレッドシートを更新
+    # 5. 記録の修正・削除 (変数名を target_idx に統一します)
+    with st.expander("🔧 学習記録の修正・削除"):
+        if not df_log.empty:
+            df_log_display = df_log.copy()
+            df_log_display["display"] = df_log["日付"].astype(str) + " | " + df_log["教科"]
+            
+            # ここで target_idx を定義
+            target_idx = st.selectbox("修正・削除する記録を選択", df_log_display.index, format_func=lambda x: df_log_display.loc[x, "display"])
+            
+            col_e1, col_e2 = st.columns(2)
+            with col_e1:
+                edit_sub = st.selectbox("教科 ", list(SUBJECTS.keys()), index=list(SUBJECTS.keys()).index(df_log.loc[target_idx, "教科"]))
+                edit_h = st.number_input("時間 (h) ", value=float(df_log.loc[target_idx, "時間"]), step=0.5)
+            with col_e2:
+                edit_d = st.date_input("日付 ", df_log.loc[target_idx, "日付"])
+                edit_n = st.text_area("内容 ", value=df_log.loc[target_idx, "内容"])
+
+            # 🆙 更新ボタン
+            if st.button("🆙 記録を更新する"):
+                df_log.loc[target_idx, ["日付", "時間", "教科", "内容"]] = [edit_d.strftime("%Y-%m-%d"), edit_h, edit_sub, edit_n]
+                conn.update(spreadsheet=SPREADSHEET_URL, worksheet="logs", data=df_log)
+                st.cache_data.clear() # キャッシュクリア
+                st.success("記録を更新しました！")
+                st.rerun()
+
+            # 🗑️ 削除ボタン
+            if st.button("🗑️ この記録を削除する"):
+                updated_df = df_log.drop(target_idx) # ここで target_idx を使用
                 conn.update(spreadsheet=SPREADSHEET_URL, worksheet="logs", data=updated_df)
-                
-                # 3. 重要：キャッシュをクリアして強制的に最新の状態にする
-                st.cache_data.clear() 
-                
+                st.cache_data.clear() # キャッシュクリア
                 st.success("記録を削除しました。")
                 st.rerun()
 
