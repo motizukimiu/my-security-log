@@ -167,9 +167,18 @@ if auth_status:
     
     with t1:
         if not df_log.empty:
+            # 日付と教科で集計
             chart_data = df_log.groupby(["日付", "教科"])["時間"].sum().unstack().fillna(0)
-            st.bar_chart(chart_data)
-        else: st.info("データがありません")
+            
+            # --- 色の設定 ---
+            # グラフに表示されている教科だけを抽出して、SUBJECTSで定義した色をリスト化
+            present_subjects = chart_data.columns
+            color_list = [SUBJECTS.get(sub, "#cccccc") for sub in present_subjects]
+            
+            # グラフを表示 (color引数で色を指定)
+            st.bar_chart(chart_data, color=color_list)
+        else:
+            st.info("データがありません")
 
     with t2:
         if not df_log.empty:
